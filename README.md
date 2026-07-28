@@ -2,7 +2,7 @@
 
 An autonomous warehouse inventory monitoring robot developed by Team Autonix for the ICIT 2026 Robotics Competition.
 
-The robot autonomously navigates warehouse aisles using ROS 2 and LiDAR while performing real-time inventory monitoring through computer vision. It combines autonomous navigation, object detection, and inventory reporting into a modular robotic platform. :contentReference[oaicite:1]{index=1}
+The robot autonomously navigates warehouse aisles using ROS 2 and LiDAR while performing real-time inventory monitoring through computer vision. It combines autonomous navigation, object detection, and inventory reporting into a modular robotic platform. 
 
 ---
 
@@ -15,7 +15,7 @@ Traditional warehouse inventory management relies heavily on manual stock-taking
 - AI-based object detection using YOLO
 - Real-time inventory monitoring dashboard
 
-The robot can patrol warehouse aisles, stop at predefined inspection points, detect and count objects on shelves, and report inventory information automatically. :contentReference[oaicite:2]{index=2}
+The robot can patrol warehouse aisles, stop at predefined inspection points, detect and count objects on shelves, and report inventory information automatically.
 
 ---
 
@@ -164,7 +164,7 @@ Team **Autonix**
 
 Supervisor
 
-Dr. Arjon Turnip, ST., MT., Ph.D. :contentReference[oaicite:3]{index=3}
+Dr. Arjon Turnip, ST., MT., Ph.D.
 
 ---
 
