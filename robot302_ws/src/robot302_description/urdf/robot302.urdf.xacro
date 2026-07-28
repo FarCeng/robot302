@@ -1,0 +1,432 @@
+<?xml version="1.0"?>
+<robot name="robot302" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  
+  <gazebo reference="base_link">
+    <material>Gazebo/Gray</material>
+  </gazebo>
+  <gazebo reference="left_wheel">
+    <material>Gazebo/Black</material>
+  </gazebo>
+  <gazebo reference="right_wheel">
+    <material>Gazebo/Black</material>
+  </gazebo>
+
+  <!-- ===================== -->
+  <!-- PARAMETERS -->
+  <!-- ===================== -->
+  <xacro:property name="base_to_footprint" value="0.08"/>
+  <xacro:property name="plate_thickness" value="0.005"/>
+
+  <xacro:property name="wheel_radius" value="0.0375"/>
+  <xacro:property name="wheel_width" value="0.02"/>
+  <xacro:property name="wheel_separation" value="0.19"/>
+
+  <xacro:property name="caster_radius" value="0.025"/>
+
+  <!-- ===================== -->
+  <!-- MATERIAL -->
+  <!-- ===================== -->
+  <material name="gray">
+    <color rgba="0.6 0.6 0.6 1.0"/>
+  </material>
+
+  <!-- ===================== -->
+  <!-- BASE FOOTPRINT -->
+  <!-- ===================== -->
+  <link name="base_footprint"/>
+
+  <joint name="base_footprint_joint" type="fixed">
+    <parent link="base_footprint"/>
+    <child link="base_link"/>
+    <origin xyz="0 0 ${base_to_footprint}"/>
+  </joint>
+
+  <!-- ===================== -->
+  <!-- BASE LINK (LEVEL 1) -->
+  <!-- ===================== -->
+  <link name="base_link">
+
+    <!-- Visual -->
+    <visual>
+      <origin xyz="-0.115 0 ${plate_thickness/2}"/>
+      <geometry><box size="0.17 0.30 ${plate_thickness}"/></geometry>
+      <material name="gray"/>
+    </visual>
+    <visual>
+      <origin xyz="0 0 ${plate_thickness/2}"/>
+      <geometry><box size="0.06 0.18 ${plate_thickness}"/></geometry>
+      <material name="gray"/>
+    </visual>
+    <visual>
+      <origin xyz="0.115 0 ${plate_thickness/2}"/>
+      <geometry><box size="0.17 0.30 ${plate_thickness}"/></geometry>
+      <material name="gray"/>
+    </visual>
+
+    <!-- Collision -->
+    <collision>
+      <origin xyz="-0.115 0 ${plate_thickness/2}"/>
+      <geometry>
+        <box size="0.17 0.30 ${plate_thickness}"/>
+      </geometry>
+    </collision>
+
+    <collision>
+      <origin xyz="0 0 ${plate_thickness/2}"/>
+      <geometry>
+        <box size="0.06 0.18 ${plate_thickness}"/>
+      </geometry>
+    </collision>
+
+    <collision>
+      <origin xyz="0.115 0 ${plate_thickness/2}"/>
+      <geometry>
+        <box size="0.17 0.30 ${plate_thickness}"/>
+      </geometry>
+    </collision>
+
+    <!-- Inertia -->
+    <inertial>
+      <origin xyz="0 0 0.02"/> <mass value="6.0"/>
+      <inertia ixx="0.045" iyy="0.061" izz="0.114" ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+
+  </link>
+
+  <!-- ===================== -->
+  <!-- LEVEL 2 PLATE -->
+  <!-- ===================== -->
+  <link name="plate_level_2">
+    <visual>
+      <origin xyz="0 0 ${plate_thickness/2}"/>
+      <geometry><box size="0.349 0.246 ${plate_thickness}"/></geometry>
+      <material name="gray"/>
+    </visual>
+
+    <collision>
+      <origin xyz="0 0 ${plate_thickness/2}"/>
+      <geometry>
+        <box size="0.349 0.246 ${plate_thickness}"/>
+      </geometry>
+    </collision>
+    
+    <inertial>
+      <origin xyz="0 0 0.0025"/>
+      <mass value="1.5"/>
+      <inertia
+        ixx="0.0076"
+        iyy="0.0153"
+        izz="0.0265"
+        ixy="0"
+        ixz="0"
+        iyz="0"/>
+    </inertial>
+  </link>
+
+  <joint name="plate_level_2_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="plate_level_2"/>
+    <origin xyz="0 0 0.084"/>
+  </joint>
+
+  <!-- ===================== -->
+  <!-- LEVEL 3 PLATE -->
+  <!-- ===================== -->
+  <link name="plate_level_3">
+    <visual>
+      <origin xyz="0 0 ${plate_thickness/2}"/>
+      <geometry><box size="0.349 0.246 ${plate_thickness}"/></geometry>
+      <material name="gray"/>
+    </visual>
+
+    <collision>
+      <origin xyz="0 0 ${plate_thickness/2}"/>
+      <geometry>
+        <box size="0.349 0.246 ${plate_thickness}"/>
+      </geometry>
+    </collision>
+
+    <inertial>
+      <origin xyz="0 0 0.0025"/>
+      <mass value="0.8"/>
+      <inertia
+        ixx="0.0041"
+        iyy="0.0082"
+        izz="0.0141"
+        ixy="0"
+        ixz="0"
+        iyz="0"/>
+    </inertial>
+  </link>
+
+  <joint name="plate_level_3_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="plate_level_3"/>
+    <origin xyz="0 0 0.145"/>
+  </joint>
+
+  <!-- ===================== -->
+  <!-- LEFT WHEEL -->
+  <!-- ===================== -->
+  <link name="left_wheel">
+    <visual>
+      <origin rpy="1.5708 0 0"/>
+      <geometry><cylinder radius="${wheel_radius}" length="${wheel_width}"/></geometry>
+      <material name="gray"/>
+    </visual>
+
+    <collision>
+      <origin rpy="1.5708 0 0"/>
+      <geometry>
+        <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
+      </geometry>
+    </collision>
+
+    <inertial>
+      <origin xyz="0 0 0"/>
+      <mass value="0.6"/>
+      <inertia
+        ixx="0.00030"
+        iyy="0.00030"
+        izz="0.00042"
+        ixy="0"
+        ixz="0"
+        iyz="0"/>
+    </inertial>
+  </link>
+
+  <joint name="left_wheel_joint" type="continuous">
+    <parent link="base_link"/>
+    <child link="left_wheel"/>
+    <origin xyz="0 ${wheel_separation/2} -0.0375"/>
+    <axis xyz="0 1 0"/>
+    <dynamics damping="1.5" friction="0.1"/>
+  </joint>
+
+  <!-- ===================== -->
+  <!-- RIGHT WHEEL -->
+  <!-- ===================== -->
+  <link name="right_wheel">
+    <visual>
+      <origin rpy="1.5708 0 0"/>
+      <geometry><cylinder radius="${wheel_radius}" length="${wheel_width}"/></geometry>
+      <material name="gray"/>
+    </visual>
+
+    <collision>
+      <origin rpy="1.5708 0 0"/>
+      <geometry>
+        <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
+      </geometry>
+    </collision>
+
+    <inertial>
+      <origin xyz="0 0 0"/>
+      <mass value="0.6"/>
+      <inertia
+        ixx="0.00030"
+        iyy="0.00030"
+        izz="0.00042"
+        ixy="0"
+        ixz="0"
+        iyz="0"/>
+    </inertial>
+  </link>
+
+  <joint name="right_wheel_joint" type="continuous">
+    <parent link="base_link"/>
+    <child link="right_wheel"/>
+    <origin xyz="0 -${wheel_separation/2} -0.0375"/>
+    <axis xyz="0 1 0"/>
+    <dynamics damping="1.5" friction="0.1"/>
+  </joint>
+
+  <!-- Gazebo properties: LEFT WHEEL -->
+  <gazebo reference="left_wheel">
+    <mu1>1.0</mu1>
+    <mu2>1.0</mu2>
+  </gazebo>
+
+  <!-- Gazebo properties: RIGHT WHEEL -->
+  <gazebo reference="right_wheel">
+    <mu1>1.0</mu1>
+    <mu2>1.0</mu2>
+  </gazebo>
+
+  <!-- ===================== -->
+  <!-- CASTER WHEEL -->
+  <!-- ===================== -->
+  <link name="caster_wheel">
+    <visual>
+      <geometry><sphere radius="${caster_radius}"/></geometry>
+      <material name="gray"/>
+    </visual>
+
+    <collision>
+      <geometry>
+        <sphere radius="${caster_radius}"/>
+      </geometry>
+    </collision>
+
+    <inertial>
+      <origin xyz="0 0 0"/>
+      <mass value="0.2"/>
+      <inertia
+        ixx="0.000032"
+        iyy="0.000032"
+        izz="0.000032"
+        ixy="0"
+        ixz="0"
+        iyz="0"/>
+    </inertial>
+  </link>
+
+  <joint name="caster_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="caster_wheel"/>
+    <origin xyz="0.115 0 -0.050"/>
+  </joint>
+
+  <!-- ===================== -->
+  <!-- IMU -->
+  <!-- ===================== -->
+  <link name="imu_link">
+    <visual>
+      <geometry><box size="0.04 0.04 ${plate_thickness}"/></geometry>
+      <material name="gray"/>
+    </visual>
+
+    <collision>
+      <geometry>
+        <box size="0.04 0.04 ${plate_thickness}"/>
+      </geometry>
+    </collision>
+
+    <!-- kecil → mass kecil, inertia kecil -->
+    <inertial>
+      <origin xyz="0 0 0.0025"/>
+      <mass value="0.05"/>
+      <inertia
+        ixx="0.00001"
+        iyy="0.00001"
+        izz="0.00001"
+        ixy="0"
+        ixz="0"
+        iyz="0"/>
+    </inertial>
+  </link>
+
+  <joint name="imu_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="imu_link"/>
+    <origin xyz="0 0 0.05"/>
+  </joint>
+
+  <!-- ===================== -->
+  <!-- LASER FRAME -->
+  <!-- ===================== -->
+  <link name="laser"/>
+
+  <joint name="laser_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="laser"/>
+    <origin xyz="0 0 0.19"/>
+  </joint>
+
+  <!-- ===================== -->
+  <!-- ROS2 CONTROL (SIMULATION ONLY) -->
+  <!-- ===================== -->
+  <gazebo>
+    <plugin name="robot302_drive" filename="libgazebo_ros_diff_drive.so">
+      <left_joint>left_wheel_joint</left_joint>
+      <right_joint>right_wheel_joint</right_joint>
+      <wheel_separation>0.19</wheel_separation>
+      <wheel_radius>0.0375</wheel_radius>
+
+      <max_wheel_torque>20</max_wheel_torque>
+      <max_wheel_acceleration>1.0</max_wheel_acceleration>
+
+      <odometry_frame>odom</odometry_frame>
+      <robot_base_frame>base_footprint</robot_base_frame>
+      <publish_odom>true</publish_odom>
+      <publish_odom_tf>true</publish_odom_tf>
+      <publish_wheel_tf>false</publish_wheel_tf>
+      <update_rate>50</update_rate>
+      <command_topic>cmd_vel</command_topic>
+    </plugin>
+  </gazebo>
+
+  <!-- ===================== -->
+  <!-- GAZEBO LIDAR -->
+  <!-- ===================== -->
+  <gazebo reference="laser">
+    <sensor type="ray" name="lidar">
+      <pose>0 0 0 0 0 0</pose>
+      <visualize>true</visualize> <update_rate>10</update_rate>
+      <ray>
+        <scan>
+          <horizontal>
+            <samples>360</samples>
+            <min_angle>-3.14159</min_angle>
+            <max_angle>3.14159</max_angle>
+          </horizontal>
+        </scan>
+        <range>
+          <min>0.12</min>
+          <max>12.0</max>
+        </range>
+      </ray>
+      <plugin name="gazebo_laser" filename="libgazebo_ros_ray_sensor.so">
+        <ros>
+          <remapping>~/out:=scan</remapping> </ros>
+        <output_type>sensor_msgs/LaserScan</output_type>
+        <frame_name>laser</frame_name>
+      </plugin>
+    </sensor>
+  </gazebo>
+
+  <link name="weight_ballast">
+    <inertial>
+      <origin xyz="0 0 0"/>
+      <mass value="0.4"/>
+      <inertia
+        ixx="0.0005"
+        iyy="0.0005"
+        izz="0.0005"
+        ixy="0"
+        ixz="0"
+        iyz="0"/>
+    </inertial>
+  </link>
+
+  <joint name="weight_ballast_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="weight_ballast"/>
+    <origin xyz="0.10 0 -0.03"/>
+  </joint>
+
+  <gazebo reference="caster_wheel">
+    <mu1>0.0</mu1>
+    <mu2>0.0</mu2>
+  </gazebo>
+  
+  <!-- ===================== -->
+  <!-- IMU RAW-->
+  <!-- ===================== -->
+  <gazebo reference="imu_link">
+    <gravity>true</gravity>
+    <sensor name="imu_sensor" type="imu">
+      <always_on>true</always_on>
+      <update_rate>50</update_rate>
+      <visualize>true</visualize>
+      <plugin filename="libgazebo_ros_imu_sensor.so" name="imu_plugin">
+        <ros>
+          <remapping>~/out:=imu/data_raw</remapping>
+        </ros>
+        <initial_orientation_as_reference>false</initial_orientation_as_reference>
+        <frame_name>imu_link</frame_name>
+      </plugin>
+    </sensor>
+  </gazebo>
+</robot>
+

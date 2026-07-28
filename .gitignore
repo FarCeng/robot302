@@ -1,0 +1,27 @@
+# ROS2
+robot302_ws/build/
+robot302_ws/install/
+robot302_ws/log/
+
+# PlatformIO
+**/.pio/
+**/.vscode/
+
+# Python
+__pycache__/
+*.pyc
+
+# Linux
+.DS_Store
+Thumbs.db
+
+# ROS bag
+*.db3
+*.mcap
+
+# AI Models
+*.pt
+*.onnx
+
+# Temporary
+*.log
