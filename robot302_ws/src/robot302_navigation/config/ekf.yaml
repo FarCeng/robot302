@@ -1,30 +1,73 @@
 ekf_filter_node:
   ros__parameters:
+
+    # =========================================================
+    # EKF BASIC
+    # =========================================================
     frequency: 30.0
+    sensor_timeout: 0.2
+
     two_d_mode: true
     publish_tf: true
-    
+
+    # =========================================================
+    # FRAMES
+    # =========================================================
     map_frame: map
     odom_frame: odom
     base_link_frame: base_footprint
     world_frame: odom
 
-    # ODOMETRI RODA (Dari odom_node.py)
+    # =========================================================
+    # WHEEL ODOMETRY
+    # Source: encoder_odometry_node
+    # Topic: /odom
+    #
+    # State vector order:
+    # x, y, z,
+    # roll, pitch, yaw,
+    # vx, vy, vz,
+    # vroll, vpitch, vyaw,
+    # ax, ay, az
+    # =========================================================
     odom0: /odom
-    odom0_config: [true,  true,  false,
-                   false, false, false,
-                   true,  true,  false,
-                   false, false, true,
-                   false, false, false]
+
+    # Fuse:
+    # x       = true
+    # y       = true
+    # yaw     = true
+    # vx      = true
+    # vy      = false
+    # vyaw    = true
+    #
+    # Everything else = false
+    odom0_config: [
+      true,  true,  false,
+      false, false, false,
+      true,  false, false,
+      false, false, false,
+      false, false, false
+    ]
+
     odom0_differential: false
     odom0_relative: false
 
-    # IMU (Dari ESP32)
-    imu0: /imu/data
-    imu0_config: [false, false, false,
-                  false, false, true,
-                  false, false, false,
-                  false, false, true,
-                  false, false, false]
-    imu0_differential: false
-    imu0_relative: true
+    # =========================================================
+    # IMU
+    # =========================================================
+    # DISABLED TEMPORARILY
+    #
+    # We will add IMU back only after the
+    # encoder-only EKF is confirmed stable.
+    #
+    # imu0: /imu/data_raw
+    # imu0_config: [
+    #   false, false, false,
+    #   false, false, false,
+    #   false, false, false,
+    #   false, false, true,
+    #   false, false, false
+    # ]
+    #
+    # imu0_differential: false
+    # imu0_relative: false
