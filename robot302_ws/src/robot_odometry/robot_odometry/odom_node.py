@@ -17,7 +17,7 @@ class EncoderOdomNode(Node):
         # =============================
         # Robot Parameters
         # =============================
-        self.wheel_radius = 0.106458    
+        self.wheel_radius = 0.0290    
         self.wheelbase = 0.19
 
         # =============================

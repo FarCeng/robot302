@@ -424,7 +424,7 @@
       msg_imu.angular_velocity.x = gyro_x_clean;
       msg_imu.angular_velocity.y = gyro_y_clean;
       msg_imu.angular_velocity.z = gyro_z_clean;
-
+      
       msg_L.x = raw_rpm_L;
       msg_L.y = filtered_rpm_L;
       msg_L.z = (float)applied_pwm_L;

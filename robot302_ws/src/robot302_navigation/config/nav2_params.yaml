@@ -46,10 +46,10 @@ controller_server:
       debug_trajectory_details: true
 
       min_vel_x: 0.01
-      max_vel_x: 0.4245      # DIPERBAIKI: Kecepatan maksimal dikunci di 0.3645
+      max_vel_x: 0.29      # DIPERBAIKI: Kecepatan maksimal dikunci di 0.3645
 
       min_speed_xy: 0.01
-      max_speed_xy: 0.4245   # DIPERBAIKI: Kecepatan absolut dikunci di 0.3645
+      max_speed_xy: 0.29   # DIPERBAIKI: Kecepatan absolut dikunci di 0.3645
 
       max_vel_theta: 1.0
       min_speed_theta: 0.05
@@ -182,8 +182,8 @@ velocity_smoother:
   ros__parameters:
     use_sim_time: false
     # DIPERBAIKI: Disetel sedikit di atas 0.3645 agar kecepatan dari DWB lolos
-    max_velocity: [0.65, 0.0, 2.0]
-    min_velocity: [-0.65, 0.0, -2.0]
+    max_velocity: [0.29, 0.0, 1.5]
+    min_velocity: [-0.29, 0.0, -1.5]
     max_accel: [0.8, 0.0, 1.0]
     max_decel: [-0.8, 0.0, -1.0]
 
