@@ -53,7 +53,7 @@
   bool is_yaw_locked = false;
   float cmd_angular_z = 0.0f;
   bool prev_straight_cmd = false;
-  
+  float prev_drive_direction = 0.0f;   // +1 = fisik maju, -1 = fisik mundur
 
   // ======================================================
   // PARAMETER ENCODER & KINEMATIKA
@@ -84,10 +84,12 @@
 
   static inline int clampPwm(float pwm)
   {
-    int out = (int)roundf(pwm);
-    if (out < 0) out = 0;
-    if (out > 255) out = 255;
-    return out;
+      int out = (int)roundf(pwm);
+
+      if (out < 0) out = 0;
+      if (out > 255) out = 255;
+
+      return out;
   }
 
   static inline int reverseDir(int dir)
@@ -314,22 +316,34 @@
               fabsf(cmd_angular_z) < 0.05f
           );
 
+          // Konvensi kamu:
+          // smoothed_target_L < 0  => robot fisik MAJU
+          // smoothed_target_L > 0  => robot fisik MUNDUR
+          float drive_direction = 0.0f;
+          if (moving_cmd)
+          {
+              drive_direction = (smoothed_target_L < 0.0f) ? 1.0f : -1.0f;
+          }
+
           // Robot berhenti atau sedang belok
           if (!moving_cmd || !straight_cmd)
           {
               is_yaw_locked = false;
               prev_straight_cmd = false;
+              prev_drive_direction = 0.0f;
           }
           else
           {
-              // Baru masuk mode lurus
-              if (!prev_straight_cmd || !is_yaw_locked)
+              // Masuk mode lurus pertama kali
+              // atau arah gerak berubah: maju <-> mundur
+              if (!prev_straight_cmd || !is_yaw_locked || drive_direction != prev_drive_direction)
               {
                   target_yaw = current_yaw;
                   is_yaw_locked = true;
               }
 
               prev_straight_cmd = true;
+              prev_drive_direction = drive_direction;
 
               float yaw_error = target_yaw - current_yaw;
 
@@ -340,15 +354,21 @@
                   yaw_error += 2.0f * PI;
 
               const float Kp_yaw = 135.0f;
-              int yaw_correction = (int)roundf(yaw_error * Kp_yaw);
+
+              // Koreksi dibalik saat mundur
+              float correction_sign = drive_direction;   // +1 maju, -1 mundur
+              int yaw_correction = (int)roundf(yaw_error * Kp_yaw * correction_sign);
+
               Serial.print(" YawErr=");
               Serial.print(yaw_error * 180.0f / PI);
 
               Serial.print(" YawPWM=");
               Serial.print(yaw_correction);
+
               applied_pwm_L -= yaw_correction;
               applied_pwm_R += yaw_correction;
           }
+          
 
           // E. CLAMP SETELAH DIKOREKSI
           applied_pwm_L = constrain(applied_pwm_L, 0, 255);
@@ -442,7 +462,4 @@
 
     // SPIN ROS
     rclc_executor_spin_some(&executor, RCL_MS_TO_NS(10));
-  
-
-
   }
