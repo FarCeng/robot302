@@ -1,18 +1,12 @@
 ekf_filter_node:
   ros__parameters:
 
-    # =========================================================
-    # EKF BASIC
-    # =========================================================
     frequency: 30.0
     sensor_timeout: 0.2
 
     two_d_mode: true
     publish_tf: true
 
-    # =========================================================
-    # FRAMES
-    # =========================================================
     map_frame: map
     odom_frame: odom
     base_link_frame: base_footprint
@@ -20,32 +14,16 @@ ekf_filter_node:
 
     # =========================================================
     # WHEEL ODOMETRY
-    # Source: encoder_odometry_node
-    # Topic: /odom
-    #
-    # State vector order:
-    # x, y, z,
-    # roll, pitch, yaw,
-    # vx, vy, vz,
-    # vroll, vpitch, vyaw,
-    # ax, ay, az
     # =========================================================
+
     odom0: /odom
 
-    # Fuse:
-    # x       = true
-    # y       = true
-    # yaw     = true
-    # vx      = true
-    # vy      = false
-    # vyaw    = true
-    #
-    # Everything else = false
+    # x, y, yaw, vx, vy, vz, vroll, vpitch, vyaw, ...
     odom0_config: [
       true,  true,  false,
-      false, false, false,
+      false, false, true,
       true,  false, false,
-      false, false, false,
+      false, false, true,
       false, false, false
     ]
 
@@ -55,19 +33,28 @@ ekf_filter_node:
     # =========================================================
     # IMU
     # =========================================================
-    # DISABLED TEMPORARILY
+
+    #imu0: /imu/data_raw
+
+    # State order:
+    # x, y, z,
+    # roll, pitch, yaw,
+    # vx, vy, vz,
+    # vroll, vpitch, vyaw,
+    # ax, ay, az
     #
-    # We will add IMU back only after the
-    # encoder-only EKF is confirmed stable.
-    #
-    # imu0: /imu/data_raw
-    # imu0_config: [
-    #   false, false, false,
-    #   false, false, false,
-    #   false, false, false,
-    #   false, false, true,
-    #   false, false, false
-    # ]
-    #
-    # imu0_differential: false
-    # imu0_relative: false
+    # Hanya gunakan angular velocity Z.
+    # Semua yang lain OFF.
+    #imu0_config: [
+    #  false, false, false,
+    #  false, false, false,
+    #  false, false, false,
+    #  false, false, true,
+    #  false, false, false
+    #]
+
+    #imu0_differential: false
+    #imu0_relative: false
+
+    # Jika IMU sudah mengeluarkan angular velocity dalam rad/s
+    # dan frame-nya benar, jangan melakukan differential.
