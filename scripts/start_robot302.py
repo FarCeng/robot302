@@ -1,69 +1,116 @@
 #!/usr/bin/env python3
+
 import os
 import signal
 import subprocess
 import time
 from typing import Optional
 
+from ament_index_python.packages import (
+    get_package_share_directory,
+    PackageNotFoundError,
+)
 
-# =========================================================
-# CONFIG
-# =========================================================
-MICROROS_PORT = '/dev/serial/by-id/usb-1a86_USB_Serial-if00-port0'
-LIDAR_PORT = '/dev/serial/by-id/usb-Silicon_Labs_CP2102_USB_to_UART_Bridge_Controller_0001-if00-port0'
-
-MAPS = [
-    'arena_robot302.yaml',
-    'my_map.yaml',
-]
+MICROROS_PORT = "/dev/serial/by-id/usb-1a86_USB_Serial-if00-port0"
+LIDAR_PORT = "/dev/serial/by-id/usb-Silicon_Labs_CP2102_USB_to_UART_Bridge_Controller_0001-if00-port0"
 
 STARTUP_TIMEOUT = 30
 TOPIC_CHECK_INTERVAL = 2
 
 
-# =========================================================
-# PROCESS MANAGEMENT
-# =========================================================
-def terminate_process_group(process: Optional[subprocess.Popen], name: str, timeout: float = 3.0):
-    """Terminate an entire process group, not only the parent process."""
-    if process is None or process.poll() is not None:
-        return
-
+def get_robot_packages():
     try:
-        pgid = os.getpgid(process.pid)
-        print(f'[INFO] Menghentikan process group {name} (PGID {pgid})...')
-        os.killpg(pgid, signal.SIGINT)
-    except ProcessLookupError:
-        return
-    except PermissionError:
-        print(f'[WARNING] Tidak punya izin mengirim SIGINT ke {name}.')
-        return
+        pkg_nav = get_package_share_directory("robot302_navigation")
+        pkg_description = get_package_share_directory("robot302_description")
+    except PackageNotFoundError as exc:
+        raise RuntimeError(
+            "Package ROS 2 tidak ditemukan.\n"
+            "Pastikan workspace sudah di-source:\n"
+            "source ~/robot302/robot302_ws/install/setup.bash"
+        ) from exc
 
-    deadline = time.time() + timeout
-    while process.poll() is None and time.time() < deadline:
-        time.sleep(0.1)
+    return pkg_nav, pkg_description
 
-    if process.poll() is None:
-        try:
-            print(f'[WARNING] {name} belum berhenti. Mengirim SIGTERM...')
-            os.killpg(os.getpgid(process.pid), signal.SIGTERM)
-        except ProcessLookupError:
-            return
 
-        deadline = time.time() + 2.0
-        while process.poll() is None and time.time() < deadline:
-            time.sleep(0.1)
+def discover_maps(pkg_nav):
+    maps_dir = os.path.join(pkg_nav, "maps")
 
-    if process.poll() is None:
-        try:
-            print(f'[WARNING] {name} masih hidup. Mengirim SIGKILL...')
-            os.killpg(os.getpgid(process.pid), signal.SIGKILL)
-        except ProcessLookupError:
-            pass
+    if not os.path.isdir(maps_dir):
+        raise FileNotFoundError(f"Direktori maps tidak ditemukan:\n{maps_dir}")
+
+    maps = sorted(
+        f for f in os.listdir(maps_dir)
+        if f.lower().endswith(".yaml")
+        and os.path.isfile(os.path.join(maps_dir, f))
+    )
+
+    if not maps:
+        raise FileNotFoundError(f"Tidak ada file .yaml di:\n{maps_dir}")
+
+    return maps_dir, maps
+
+
+def validate_map(map_yaml):
+    if not os.path.isfile(map_yaml):
+        raise FileNotFoundError(f"Map YAML tidak ditemukan:\n{map_yaml}")
+
+    yaml_dir = os.path.dirname(map_yaml)
+    image_filename = None
+
+    with open(map_yaml, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line.startswith("image:") and not line.startswith("#"):
+                image_filename = line.split(":", 1)[1].strip()
+                break
+
+    if not image_filename:
+        raise RuntimeError(f'Parameter "image:" tidak ditemukan:\n{map_yaml}')
+
+    pgm_path = (
+        image_filename
+        if os.path.isabs(image_filename)
+        else os.path.join(yaml_dir, image_filename)
+    )
+
+    if not os.path.isfile(pgm_path):
+        raise FileNotFoundError(
+            f"File image map tidak ditemukan:\n{pgm_path}"
+        )
+
+    return pgm_path
+
+
+def select_map(pkg_nav):
+    maps_dir, maps = discover_maps(pkg_nav)
+
+    print("\n=== PILIH MAP ===")
+    for i, map_name in enumerate(maps, 1):
+        print(f"[{i}] {map_name}")
+
+    while True:
+        choice = input(f"\nPilih map (1-{len(maps)}) [Default: 1]: ").strip()
+
+        if not choice:
+            index = 0
+            break
+
+        if choice.isdigit() and 1 <= int(choice) <= len(maps):
+            index = int(choice) - 1
+            break
+
+        print(f"[ERROR] Pilihan harus 1-{len(maps)}.")
+
+    map_yaml = os.path.join(maps_dir, maps[index])
+    pgm_path = validate_map(map_yaml)
+
+    print(f"\n[ OK ] YAML: {map_yaml}")
+    print(f"[ OK ] PGM : {pgm_path}")
+
+    return map_yaml
 
 
 def run_quiet(command, timeout=5):
-    """Run a command quietly and return CompletedProcess or None on timeout/error."""
     try:
         return subprocess.run(
             command,
@@ -77,16 +124,43 @@ def run_quiet(command, timeout=5):
         return None
 
 
-def cleanup_stale_robot_processes():
-    """
-    Cleanup only processes associated with this robot/Nav2 stack.
-    Do NOT kill the generic ROS 2 daemon.
-    """
-    print('\n' + '=' * 40)
-    print('=== CLEANUP PROSES LAMA ROBOT302 ===')
-    print('=' * 40)
+def terminate_process_group(
+    process: Optional[subprocess.Popen],
+    name: str,
+    timeout=3,
+):
+    if process is None or process.poll() is not None:
+        return
 
-    # Specific patterns. Avoid `pkill -f ros2` because that is too broad.
+    try:
+        pgid = os.getpgid(process.pid)
+        print(f"[INFO] Menghentikan {name}...")
+        os.killpg(pgid, signal.SIGINT)
+    except (ProcessLookupError, PermissionError):
+        return
+
+    deadline = time.time() + timeout
+    while process.poll() is None and time.time() < deadline:
+        time.sleep(0.1)
+
+    if process.poll() is None:
+        try:
+            os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+        except ProcessLookupError:
+            return
+
+        deadline = time.time() + 2
+        while process.poll() is None and time.time() < deadline:
+            time.sleep(0.1)
+
+    if process.poll() is None:
+        try:
+            os.killpg(os.getpgid(process.pid), signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+
+
+def cleanup_stale_robot_processes():
     patterns = [
         "robot302_bringup",
         "robot302_navigation",
@@ -100,168 +174,136 @@ def cleanup_stale_robot_processes():
         "rviz2",
     ]
 
-    found_any = False
+    print("\n=== CLEANUP PROSES LAMA ===")
 
     for pattern in patterns:
-        # First check if anything matches.
-        result = run_quiet(['pgrep', '-af', pattern])
-        if result is None:
+        result = run_quiet(["pgrep", "-af", pattern])
+
+        if result is None or not result.stdout.strip():
             continue
 
-        lines = [line for line in result.stdout.splitlines() if line.strip()]
-        if not lines:
-            continue
-
-        found_any = True
-        print(f'[INFO] Menemukan proses: {pattern}')
-        for line in lines:
-            print(f'       {line}')
-
-        # Kill matching processes. -f matches full command line.
-        subprocess.run(['pkill', '-TERM', '-f', pattern], check=False)
+        print(f"[INFO] Membersihkan: {pattern}")
+        subprocess.run(["pkill", "-TERM", "-f", pattern], check=False)
         time.sleep(0.5)
 
-        # Escalate only if necessary.
-        result_after = run_quiet(['pgrep', '-af', pattern])
-        if result_after and result_after.stdout.strip():
-            print(f'[WARNING] {pattern} masih hidup, mengirim KILL...')
-            subprocess.run(['pkill', '-KILL', '-f', pattern], check=False)
+        result = run_quiet(["pgrep", "-af", pattern])
+        if result and result.stdout.strip():
+            subprocess.run(["pkill", "-KILL", "-f", pattern], check=False)
 
-    if not found_any:
-        print('[OK] Tidak ada proses robot/Nav2 lama yang perlu dibersihkan.')
-    else:
-        time.sleep(1)
-        print('[OK] Cleanup selesai.')
+    time.sleep(1)
 
 
-# =========================================================
-# USB / ROS TOPIC CHECK
-# =========================================================
 def check_usb_permission(microros_port, lidar_port):
-    print('=' * 40)
-    print('=== TAHAP 1: CEK FISIK KABEL USB ===')
-    print('=' * 40)
+    print("\n=== CEK USB ===")
 
     while True:
-        micro_ok = os.path.exists(microros_port) and os.access(microros_port, os.R_OK | os.W_OK)
-        lidar_ok = os.path.exists(lidar_port) and os.access(lidar_port, os.R_OK | os.W_OK)
+        micro_ok = (
+            os.path.exists(microros_port)
+            and os.access(microros_port, os.R_OK | os.W_OK)
+        )
+        lidar_ok = (
+            os.path.exists(lidar_port)
+            and os.access(lidar_port, os.R_OK | os.W_OK)
+        )
 
         if micro_ok and lidar_ok:
-            print('[ OK ] Kabel terhubung dan izin akses diberikan.')
+            print("[ OK ] Micro-ROS dan LiDAR siap.")
             return
 
-        print('[GAGAL] Akses USB ditolak atau perangkat belum terhubung.')
-        print(f'        Micro-ROS: {microros_port} -> {"OK" if micro_ok else "TIDAK"}')
-        print(f'        LiDAR:     {lidar_port} -> {"OK" if lidar_ok else "TIDAK"}')
-        print('        Coba lagi dalam 3 detik...')
+        print("[GAGAL] USB belum siap:")
+        print(f"  Micro-ROS: {'OK' if micro_ok else 'TIDAK'}")
+        print(f"  LiDAR    : {'OK' if lidar_ok else 'TIDAK'}")
         time.sleep(3)
 
 
-def topic_has_publisher(topic_name):
-    """Return True when a ROS 2 topic has at least one publisher."""
-    result = run_quiet(['ros2', 'topic', 'info', topic_name], timeout=5)
+def topic_has_publisher(topic):
+    result = run_quiet(["ros2", "topic", "info", topic])
+
     if result is None or result.returncode != 0:
         return False
 
     for line in result.stdout.splitlines():
-        if line.strip().lower().startswith('publisher count:'):
+        if line.strip().lower().startswith("publisher count:"):
             try:
-                return int(line.split(':', 1)[1].strip()) > 0
+                return int(line.split(":", 1)[1].strip()) > 0
             except (ValueError, IndexError):
                 return False
 
     return False
 
 
-def topic_has_data(topic_name, timeout=3):
-    """Best-effort check. A timeout does not fail the whole startup."""
+def topic_has_data(topic, timeout=3):
     result = run_quiet(
-        ['ros2', 'topic', 'echo', '--once', topic_name],
+        ["ros2", "topic", "echo", "--once", topic],
         timeout=timeout,
     )
-    if result is None or result.returncode != 0:
-        return False
-    return bool(result.stdout.strip())
+
+    return bool(result and result.stdout.strip())
 
 
-# =========================================================
-# LAUNCH HELPERS
-# =========================================================
 def start_process(command, name):
-    """
-    Start a command in its own process group so Ctrl+C/cleanup can stop
-    all descendants spawned by ros2 launch.
-    """
-    print(f'[INFO] Starting {name}...')
-    return subprocess.Popen(
-        command,
-        start_new_session=True,
-    )
+    print(f"[INFO] Starting {name}...")
+    return subprocess.Popen(command, start_new_session=True)
 
 
-# =========================================================
-# MAIN
-# =========================================================
 def main():
     hw_process = None
     nav_process = None
     rviz_process = None
 
-    # -----------------------------------------------------
-    # 0. CLEANUP STALE PROCESSES
-    # -----------------------------------------------------
+    pkg_nav, pkg_description = get_robot_packages()
+
+    print("\n=== ROBOT302 STARTUP ===")
+    print(f"[INFO] Navigation : {pkg_nav}")
+    print(f"[INFO] Description: {pkg_description}")
+
     cleanup_stale_robot_processes()
 
-    # Optional: refresh ROS graph daemon state.
-    # Do NOT kill the daemon process manually; just refresh its cache.
-    run_quiet(['ros2', 'daemon', 'stop'], timeout=5)
-    run_quiet(['ros2', 'daemon', 'start'], timeout=5)
+    run_quiet(["ros2", "daemon", "stop"])
+    run_quiet(["ros2", "daemon", "start"])
     time.sleep(1)
 
     try:
-        # -------------------------------------------------
         # 1. USB
-        # -------------------------------------------------
         check_usb_permission(MICROROS_PORT, LIDAR_PORT)
 
-        # -------------------------------------------------
-        # 2. HARDWARE BRINGUP
-        # -------------------------------------------------
-        print('\n' + '=' * 40)
-        print('=== TAHAP 2: SINKRONISASI ROS 2 TOPIC ===')
-        print('=' * 40)
-        print('[INFO] Menyalakan Micro-ROS Agent dan LiDAR...')
+        # 2. Hardware
+        print("\n=== SINKRONISASI HARDWARE ===")
 
         hw_cmd = [
-            'ros2', 'launch', 'robot302_bringup', 'robot302.launch.py',
-            'launch_nav:=false',
-            'use_rviz:=false',
+            "ros2", "launch",
+            "robot302_bringup",
+            "robot302.launch.py",
+            "launch_nav:=false",
+            "use_rviz:=false",
         ]
 
-        hw_process = start_process(hw_cmd, 'Robot302 Bringup')
-
+        hw_process = start_process(hw_cmd, "Robot302 Bringup")
         time.sleep(3)
-        print('\n[INFO] Menunggu publisher sensor...')
-        print('[INFO] Tidak perlu menekan RESET kecuali Micro-ROS benar-benar stuck.')
 
-        wait_started = time.time()
+        print("[INFO] Menunggu publisher sensor...")
+
+        start_time = time.time()
         topics_ready = False
 
         while not topics_ready:
             if hw_process.poll() is not None:
                 raise RuntimeError(
-                    f'robot302_bringup berhenti sendiri dengan return code {hw_process.returncode}.'
+                    f"robot302_bringup berhenti "
+                    f"(return code {hw_process.returncode})."
                 )
 
-            left_ok = topic_has_publisher('/left_encoder')
-            right_ok = topic_has_publisher('/right_encoder')
-            scan_ok = topic_has_publisher('/scan')
+            left_ok = topic_has_publisher("/left_encoder")
+            right_ok = topic_has_publisher("/right_encoder")
+            scan_ok = topic_has_publisher("/scan")
 
-            elapsed = int(time.time() - wait_started)
+            elapsed = int(time.time() - start_time)
+
             print(
-                f'  -> left_encoder={"OK" if left_ok else "..."}, '
-                f'right_encoder={"OK" if right_ok else "..."}, '
-                f'scan={"OK" if scan_ok else "..."} [{elapsed}s]',
+                f"  left={'OK' if left_ok else '...'} | "
+                f"right={'OK' if right_ok else '...'} | "
+                f"scan={'OK' if scan_ok else '...'} "
+                f"[{elapsed}s]",
                 flush=True,
             )
 
@@ -270,122 +312,99 @@ def main():
                 break
 
             if elapsed >= STARTUP_TIMEOUT:
-                print('\n[WARNING] Timeout menunggu publisher sensor.')
-                print('[WARNING] Cek Micro-ROS Agent, LiDAR, dan port USB.')
-                print('[WARNING] Startup tetap dilanjutkan agar diagnostik bisa dilakukan.')
+                print("[WARNING] Timeout sensor. Startup dilanjutkan.")
                 break
 
             time.sleep(TOPIC_CHECK_INTERVAL)
 
         if topics_ready:
-            print('\n[ OK ] Publisher sensor terdeteksi.')
-            left_data = topic_has_data('/left_encoder', timeout=3)
-            right_data = topic_has_data('/right_encoder', timeout=3)
-            scan_data = topic_has_data('/scan', timeout=3)
+            print("[ OK ] Publisher sensor terdeteksi.")
+            print(
+                f"[INFO] /left_encoder : "
+                f"{'OK' if topic_has_data('/left_encoder') else 'BELUM'}"
+            )
+            print(
+                f"[INFO] /right_encoder: "
+                f"{'OK' if topic_has_data('/right_encoder') else 'BELUM'}"
+            )
+            print(
+                f"[INFO] /scan         : "
+                f"{'OK' if topic_has_data('/scan') else 'BELUM'}"
+            )
 
-            print(f'[INFO] Data /left_encoder : {"DITERIMA" if left_data else "BELUM DITERIMA"}')
-            print(f'[INFO] Data /right_encoder: {"DITERIMA" if right_data else "BELUM DITERIMA"}')
-            print(f'[INFO] Data /scan         : {"DITERIMA" if scan_data else "BELUM DITERIMA"}')
-            print('[OK] Sinkronisasi hardware selesai.\n')
+        # 3. Map
+        map_full_path = select_map(pkg_nav)
 
-        # -------------------------------------------------
-        # 3. MAP MENU
-        # -------------------------------------------------
-        print('=' * 40)
-        print('=== TAHAP 3: MENU NAVIGASI ===')
-        print('=' * 40)
+        # 4. Nav2
+        print("\n=== START NAV2 ===")
 
-        for i, map_name in enumerate(MAPS, start=1):
-            print(f'[{i}] {map_name}')
-
-        idx_map = input(f'\nMasukkan nomor map (1-{len(MAPS)}) [Default: 1]: ').strip()
-        if idx_map.isdigit() and 1 <= int(idx_map) <= len(MAPS):
-            selected_map = MAPS[int(idx_map) - 1]
-        else:
-            selected_map = MAPS[0]
-
-        home_dir = os.path.expanduser('~')
-        map_full_path = os.path.join(
-            home_dir,
-            'ros2_ws', 'src', 'robot302_navigation', 'maps', selected_map,
-        )
-
-        if not os.path.isfile(map_full_path):
-            raise FileNotFoundError(f'Map tidak ditemukan: {map_full_path}')
-
-        # -------------------------------------------------
-        # 4. NAV2
-        # -------------------------------------------------
-        print('\n[INFO] Menjalankan Navigation 2...')
         nav_cmd = [
-            'ros2', 'launch', 'robot302_navigation', 'navigation.launch.py',
-            f'map:={map_full_path}',
-            'use_sim_time:=false',
+            "ros2", "launch",
+            "robot302_navigation",
+            "navigation.launch.py",
+            f"map:={map_full_path}",
+            "use_sim_time:=false",
         ]
-        nav_process = start_process(nav_cmd, 'Nav2')
 
-        # -------------------------------------------------
-        # 5. RVIZ
-        # -------------------------------------------------
-        rviz_config_path = os.path.join(
-            home_dir,
-            'ros2_ws', 'src', 'robot302_description', 'rviz', 'nav2_302sim_view.rviz',
+        print("[INFO] Map:", map_full_path)
+        nav_process = start_process(nav_cmd, "Nav2")
+
+        # 5. RViz
+        rviz_config = os.path.join(
+            pkg_description,
+            "rviz",
+            "nav2_302sim_view.rviz",
         )
 
-        if not os.path.isfile(rviz_config_path):
-            raise FileNotFoundError(f'RViz config tidak ditemukan: {rviz_config_path}')
+        if not os.path.isfile(rviz_config):
+            raise FileNotFoundError(
+                f"RViz config tidak ditemukan:\n{rviz_config}"
+            )
 
-        print('[INFO] Menjalankan RViz...')
         rviz_cmd = [
-            'ros2', 'run', 'rviz2', 'rviz2',
-            '-d', rviz_config_path,
-            '--ros-args', '-p', 'use_sim_time:=false',
+            "ros2", "run", "rviz2", "rviz2",
+            "-d", rviz_config,
+            "--ros-args",
+            "-p", "use_sim_time:=false",
         ]
-        rviz_process = start_process(rviz_cmd, 'RViz')
 
-        # -------------------------------------------------
-        # 6. MONITOR
-        # -------------------------------------------------
-        print('\n[ STATUS ] Sistem Robot Aktif!')
-        print('[ STATUS ] Tekan Ctrl+C untuk mematikan seluruh sistem.')
+        rviz_process = start_process(rviz_cmd, "RViz")
+
+        print("\n[STATUS] Robot302 aktif.")
+        print("[STATUS] Ctrl+C untuk menghentikan.")
 
         while True:
-            # Detect unexpected death of child processes.
             if hw_process.poll() is not None:
-                print(f'\n[WARNING] Bringup berhenti. Return code: {hw_process.returncode}')
+                print("[WARNING] Bringup berhenti.")
                 break
 
             if nav_process.poll() is not None:
-                print(f'\n[WARNING] Nav2 berhenti. Return code: {nav_process.returncode}')
+                print("[WARNING] Nav2 berhenti.")
                 break
 
             if rviz_process.poll() is not None:
-                print(f'\n[WARNING] RViz berhenti. Return code: {rviz_process.returncode}')
+                print("[WARNING] RViz berhenti.")
                 break
 
             time.sleep(1)
 
     except KeyboardInterrupt:
-        print('\n[INFO] Ctrl+C diterima. Mematikan seluruh sistem...')
+        print("\n[INFO] Ctrl+C diterima.")
 
     except Exception as exc:
-        print(f'\n[ERROR] {exc}')
+        print(f"\n[ERROR] {exc}")
 
     finally:
-        print('\n' + '=' * 40)
-        print('=== CLEANUP SESI SAAT INI ===')
-        print('=' * 40)
+        print("\n=== CLEANUP ===")
 
-        # Kill complete process groups created by this Python script.
-        terminate_process_group(rviz_process, 'RViz')
-        terminate_process_group(nav_process, 'Nav2')
-        terminate_process_group(hw_process, 'Robot302 Bringup')
+        terminate_process_group(rviz_process, "RViz")
+        terminate_process_group(nav_process, "Nav2")
+        terminate_process_group(hw_process, "Robot302 Bringup")
 
-        # Safety net for stale child processes from this session.
         cleanup_stale_robot_processes()
 
-        print('[OK] Sistem robot dihentikan.')
+        print("[OK] Sistem dihentikan.")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

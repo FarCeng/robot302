@@ -152,7 +152,7 @@ global_costmap:
 map_server:
   ros__parameters:
     use_sim_time: false
-    yaml_filename: "/home/farceng/ros2_ws/install/robot302_navigation/share/robot302_navigation/maps/arena_robot302.yaml"
+    yaml_filename: ""
 
 behavior_server:
   ros__parameters:
