@@ -88,17 +88,17 @@ class EncoderOdomNode(Node):
         # =============================
         # Timer
         # =============================
-        self.timer = self.create_timer(0.02, self.update_odometry)
+        self.timer = self.create_timer(0.05, self.update_odometry)
 
         self.get_logger().info('Encoder Odometry Node Started')
 
     def left_encoder_callback(self, msg: Vector3):
         # pakai filtered rpm dari ESP32
-        self.left_rpm = float(msg.y)
+        self.left_rpm = float(msg.x)
 
     def right_encoder_callback(self, msg: Vector3):
         # pakai filtered rpm dari ESP32
-        self.right_rpm = float(msg.y)
+        self.right_rpm = float(msg.x)
 
     def _normalize_angle(self, angle: float) -> float:
         return math.atan2(math.sin(angle), math.cos(angle))
@@ -165,7 +165,7 @@ class EncoderOdomNode(Node):
             0.0,  0.0,  999.0, 0.0,  0.0,  0.0,
             0.0,  0.0,  0.0,  999.0, 0.0,  0.0,
             0.0,  0.0,  0.0,  0.0,  999.0, 0.0,
-            0.0,  0.0,  0.0,  0.0,  0.0,  0.5
+            0.0,  0.0,  0.0,  0.0,  0.0,  999.0
         ]
 
         odom.twist.covariance = [
@@ -174,7 +174,7 @@ class EncoderOdomNode(Node):
             0.0,  0.0,  999.0, 0.0,  0.0,  0.0,
             0.0,  0.0,  0.0,  999.0, 0.0,  0.0,
             0.0,  0.0,  0.0,  0.0,  999.0, 0.0,
-            0.0,  0.0,  0.0,  0.0,  0.0,  0.3
+            0.0,  0.0,  0.0,  0.0,  0.0,  0.02
         ]
 
         self.odom_pub.publish(odom)

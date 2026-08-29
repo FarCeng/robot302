@@ -1,10 +1,8 @@
 ekf_filter_node:
   ros__parameters:
     frequency: 30.0
-    sensor_timeout: 0.2
-
+    sensor_timeout: 0.15
     two_d_mode: true
-
     publish_tf: true
 
     map_frame: map
@@ -13,7 +11,6 @@ ekf_filter_node:
     world_frame: odom
 
     odom0: /odom
-
     odom0_config: [
       false,  # x
       false,  # y
@@ -21,14 +18,12 @@ ekf_filter_node:
       false,  # roll
       false,  # pitch
       false,  # yaw
-
       true,   # vx
       false,  # vy
       false,  # vz
       false,  # vroll
       false,  # vpitch
       true,   # vyaw
-
       false,  # ax
       false,  # ay
       false   # az
@@ -36,33 +31,27 @@ ekf_filter_node:
 
     odom0_differential: false
     odom0_relative: false
-    odom0_queue_size: 10
+    odom0_queue_size: 5
 
-    # =========================================================
-    # IMU
-    # =========================================================
+    imu0: /imu/data_raw
+    imu0_config: [
+      false,  # x
+      false,  # y
+      false,  # z
+      false,  # roll
+      false,  # pitch
+      false,  # yaw
+      false,  # vx
+      false,  # vy
+      false,  # vz
+      false,  # vroll
+      false,  # vpitch
+      true,   # vyaw
+      false,  # ax
+      false,  # ay
+      false   # az
+    ]
 
-    #imu0: /imu/data_raw
-
-    # State order:
-    # x, y, z,
-    # roll, pitch, yaw,
-    # vx, vy, vz,
-    # vroll, vpitch, vyaw,
-    # ax, ay, az
-    #
-    # Hanya gunakan angular velocity Z.
-    # Semua yang lain OFF.
-    #imu0_config: [
-    #  false, false, false,
-    #  false, false, false,
-    #  false, false, false,
-    #  false, false, true,
-    #  false, false, false
-    #]
-
-    #imu0_differential: false
-    #imu0_relative: false
-
-    # Jika IMU sudah mengeluarkan angular velocity dalam rad/s
-    # dan frame-nya benar, jangan melakukan differential.
+    imu0_differential: false
+    imu0_relative: false
+    imu0_queue_size: 5

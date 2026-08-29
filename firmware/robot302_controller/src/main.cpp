@@ -296,7 +296,7 @@
           applied_pwm_R = clampPwm(rpmToPwmRight(fabsf(smoothed_target_R)));
 
           // B. RIGHT WHEEL TRIM (Penyeimbang kekuatan motor bawaan)
-          applied_pwm_R = (int)((float)applied_pwm_R * 1.00f);
+          applied_pwm_R = (int)((float)applied_pwm_R * 0.955f);
 
           // C. SINKRONISASI RODA (Error Correction 1)
           float sync_error = fabsf(filtered_rpm_L) - fabsf(filtered_rpm_R);
