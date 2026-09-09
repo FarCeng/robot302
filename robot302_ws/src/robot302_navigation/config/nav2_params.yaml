@@ -38,25 +38,25 @@ controller_server:
     goal_checker:
       plugin: "nav2_controller::SimpleGoalChecker"
       stateful: true
-      xy_goal_tolerance: 0.25
-      yaw_goal_tolerance: 0.30
+      xy_goal_tolerance: 0.60
+      yaw_goal_tolerance: 1.00
 
     FollowPath:
       plugin: "dwb_core::DWBLocalPlanner"
       debug_trajectory_details: true
 
-      min_vel_x: 0.01
-      max_vel_x: 0.32     # DIPERBAIKI: Kecepatan maksimal dikunci di 0.3645
+      min_vel_x: -0.32
+      max_vel_x: 0.32     
 
-      min_speed_xy: 0.01
-      max_speed_xy: 0.32   # DIPERBAIKI: Kecepatan absolut dikunci di 0.3645
+      min_speed_xy: -0.32
+      max_speed_xy: 0.32   
 
-      max_vel_theta: 1.0
+      max_vel_theta: 5.0
       min_speed_theta: 0.05
 
       acc_lim_x: 0.8
       decel_lim_x: -0.8
-      acc_lim_theta: 1.0
+      acc_lim_theta: 5.0
       decel_lim_theta: -1.0
 
       vx_samples: 20
