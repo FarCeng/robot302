@@ -292,10 +292,8 @@
         } 
         else {
           // A. FEEDFORWARD MODEL MATEMATIS
-          applied_pwm_L = clampPwm(rpmToPwmLeft(fabsf(smoothed_t
-arget_L)));
+          applied_pwm_L = clampPwm(rpmToPwmLeft(fabsf(smoothed_target_L)));
           applied_pwm_R = clampPwm(rpmToPwmRight(fabsf(smoothed_target_R)));
-
 
           // B. RIGHT WHEEL TRIM (Penyeimbang kekuatan motor bawaan)
           applied_pwm_R = (int)((float)applied_pwm_R * 0.955f);
