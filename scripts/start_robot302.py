@@ -4,6 +4,7 @@ import os
 import signal
 import subprocess
 import time
+import serial
 from typing import Optional
 
 from ament_index_python.packages import (
@@ -245,6 +246,38 @@ def start_process(command, name):
     print(f"[INFO] Starting {name}...")
     return subprocess.Popen(command, start_new_session=True)
 
+def reset_esp32(port, reset_ms=100, after_reset_ms=100):
+    print(f"[INFO] Reset ESP32 melalui {port}...")
+
+    try:
+        with serial.Serial(
+            port=port,
+            baudrate=115200,
+            timeout=0.1,
+        ) as ser:
+            # Pastikan GPIO0 tidak masuk bootloader mode
+            ser.dtr = False
+            time.sleep(0.05)
+
+            # RTS biasanya terhubung ke EN/RESET pada ESP32 DevKit
+            ser.rts = True
+            time.sleep(reset_ms / 1000.0)
+
+            # Lepaskan reset
+            ser.rts = False
+
+        time.sleep(after_reset_ms / 1000.0)
+
+        print(
+            f"[ OK ] ESP32 di-reset "
+            f"({reset_ms} ms + {after_reset_ms} ms recovery)."
+        )
+
+    except serial.SerialException as exc:
+        raise RuntimeError(
+            f"Tidak dapat reset ESP32 melalui {port}: {exc}"
+        ) from exc
+
 
 def main():
     hw_process = None
@@ -267,7 +300,15 @@ def main():
         # 1. USB
         check_usb_permission(MICROROS_PORT, LIDAR_PORT)
 
-        # 2. Hardware
+        # 2. Reset ESP32 sebelum Micro-ROS dijalankan
+        print("\n=== RESET ESP32 ===")
+        reset_esp32(
+            MICROROS_PORT,
+            reset_ms=100,
+            after_reset_ms=100,
+        )
+
+        # 3. Hardware
         print("\n=== SINKRONISASI HARDWARE ===")
 
         hw_cmd = [
@@ -332,10 +373,10 @@ def main():
                 f"{'OK' if topic_has_data('/scan') else 'BELUM'}"
             )
 
-        # 3. Map
+        # 4. Map
         map_full_path = select_map(pkg_nav)
 
-        # 4. Nav2
+        # 5. Nav2
         print("\n=== START NAV2 ===")
 
         nav_cmd = [
@@ -349,7 +390,7 @@ def main():
         print("[INFO] Map:", map_full_path)
         nav_process = start_process(nav_cmd, "Nav2")
 
-        # 5. RViz
+        # 6. RViz
         rviz_config = os.path.join(
             pkg_description,
             "rviz",

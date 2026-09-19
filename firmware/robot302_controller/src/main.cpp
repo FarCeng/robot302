@@ -158,7 +158,7 @@
     float raw_vx = data->linear.x;
     float raw_w  = data->angular.z;
 
-    float smooth_w = raw_w * 0.7f; 
+    float smooth_w = raw_w * 3.85f; 
     float turn_penalty = fabsf(smooth_w) * 0.15f; 
     if (turn_penalty > 0.3f) turn_penalty = 0.3f; 
     
