@@ -56,7 +56,7 @@ controller_server:
 
       # Tidak terlalu sempit karena robot fisik
       # masih punya dead-zone saat pivot.
-      yaw_goal_tolerance: 0.50
+      yaw_goal_tolerance: 0.1
 
       symmetric_yaw_tolerance: false
 
@@ -77,8 +77,8 @@ controller_server:
 
       # Pertahankan config lama.
       # Robot tetap diperbolehkan maju dan mundur.
-      min_vel_x: -0.35
-      max_vel_x: 0.35
+      min_vel_x: -0.50
+      max_vel_x: 0.50
 
       min_vel_y: 0.0
       max_vel_y: 0.0
@@ -102,13 +102,13 @@ controller_server:
       #
       # Jadi kemampuan rotate tetap dekat dengan sebelumnya,
       # tetapi Nav2 tidak mengirim angular ekstrem.
-      max_vel_theta: 1.0
+      max_vel_theta: 1.65
 
       # Jangan paksa minimum angular besar.
       #
       # Parameter ini adalah minimum angular speed DWB,
       # bukan minimum PWM motor.
-      min_speed_theta: 0.0
+      min_speed_theta: 1.55
 
 
       # ==========================================================
@@ -129,8 +129,8 @@ controller_server:
       # 1.5 * 3.85 = 5.775 effective
       #
       # Jadi cukup dekat dengan respons firmware lama.
-      acc_lim_theta: 1.5
-      decel_lim_theta: -1.5
+      acc_lim_theta: 2.9
+      decel_lim_theta: -2.9
 
 
       # ==========================================================

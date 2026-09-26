@@ -58,8 +58,8 @@
   // ======================================================
   // PARAMETER ENCODER & KINEMATIKA
   // ======================================================
-  const int L_PPR = 102;
-  const int R_PPR = 102;
+  const int L_PPR = 224;
+  const int R_PPR = 224;
   const float Ts = 0.05f;
 
   const int LEFT_FORWARD_DIR  = HIGH;
@@ -106,11 +106,11 @@
 
   void IRAM_ATTR leftISR()
   {
-    (digitalRead(L_ENC_B) == HIGH) ? left_count-- : left_count++;
+    (digitalRead(L_ENC_B) == HIGH) ? left_count++ : left_count--;
   }
   void IRAM_ATTR rightISR()
   {
-    (digitalRead(R_ENC_B) == HIGH) ? right_count++ : right_count--;
+    (digitalRead(R_ENC_B) == HIGH) ? right_count-- : right_count++;
   }
 
   // ======================================================
@@ -158,7 +158,7 @@
     float raw_vx = data->linear.x;
     float raw_w  = data->angular.z;
 
-    float smooth_w = raw_w * 3.85f; 
+    float smooth_w = raw_w * 1.85f; 
     float turn_penalty = fabsf(smooth_w) * 0.15f; 
     if (turn_penalty > 0.3f) turn_penalty = 0.3f; 
     
@@ -296,7 +296,7 @@
           applied_pwm_R = clampPwm(rpmToPwmRight(fabsf(smoothed_target_R)));
 
           // B. RIGHT WHEEL TRIM (Penyeimbang kekuatan motor bawaan)
-          applied_pwm_R = (int)((float)applied_pwm_R * 0.955f);
+          //applied_pwm_R = (int)((float)applied_pwm_R * 0.955f);
 
           // C. SINKRONISASI RODA (Error Correction 1)
           float sync_error = fabsf(filtered_rpm_L) - fabsf(filtered_rpm_R);
