@@ -27,6 +27,7 @@ setup(
             'multi_waypoint = robot302_autonomy.multi_waypoint:main',
             'patroli = robot302_autonomy.patroli:main',
             'robot_test_runner = robot302_autonomy.robot_test_runner:main',
+            'vision_patroli = robot302_autonomy.vision_patroli:main',
         ],
     },
 )

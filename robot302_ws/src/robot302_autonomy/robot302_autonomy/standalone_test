@@ -1,0 +1,67 @@
+#!/usr/bin/env python3
+import os
+import cv2
+from ultralytics import YOLO
+
+# Path directly pointing to your model weights
+MODEL_PATH = os.path.expanduser(
+    "~/robot302/robot302_ws/src/robot302_autonomy/robot302_autonomy/best.pt"
+)
+
+if not os.path.exists(MODEL_PATH):
+    print(f"[ERROR] best.pt not found at: {MODEL_PATH}")
+    exit(1)
+
+print(f"[OK] Loading YOLO model from: {MODEL_PATH}...")
+model = YOLO(MODEL_PATH)
+print(f"[OK] Model loaded. Classes: {model.names}")
+
+# Find an active camera index
+cap = None
+active_index = -1
+for idx in [1, 0, 2, 4]:
+    test_cap = cv2.VideoCapture(idx)
+    if test_cap.isOpened():
+        ret, frame = test_cap.read()
+        if ret and frame is not None:
+            cap = test_cap
+            active_index = idx
+            break
+        test_cap.release()
+
+if cap is None:
+    print("[ERROR] Could not open any camera device (tried 1, 0, 2, 4).")
+    exit(1)
+
+print(f"[OK] Camera opened successfully on index {active_index}!")
+print("Point the camera at a bleu_cube or bleu_sphere. Press 'q' to quit.")
+
+cv2.namedWindow("Standalone Vision Test", cv2.WINDOW_NORMAL)
+
+try:
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if not ret:
+            print("[ERROR] Failed to read frame.")
+            break
+
+        results = model.predict(source=frame, conf=0.5, verbose=False)[0]
+        annotated_frame = results.plot()
+
+        counts = {}
+        for c in results.boxes.cls:
+            label = model.names[int(c)]
+            counts[label] = counts.get(label, 0) + 1
+
+        if counts:
+            print(f"[DETECTED] {counts}", end="\r", flush=True)
+
+        cv2.imshow("Standalone Vision Test", annotated_frame)
+        if cv2.waitKey(30) & 0xFF == ord('q'):
+            break
+finally:
+    cap.release()
+    cv2.destroyAllWindows()
+    for _ in range(5):
+        cv2.waitKey(1)
+    print("\n[OK] Camera released and test closed.")
