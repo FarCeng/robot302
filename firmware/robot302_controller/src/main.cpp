@@ -53,13 +53,13 @@
   bool is_yaw_locked = false;
   float cmd_angular_z = 0.0f;
   bool prev_straight_cmd = false;
-  
+  float prev_drive_direction = 0.0f;   // +1 = fisik maju, -1 = fisik mundur
 
   // ======================================================
   // PARAMETER ENCODER & KINEMATIKA
   // ======================================================
-  const int L_PPR = 102;
-  const int R_PPR = 102;
+  const int L_PPR = 224;
+  const int R_PPR = 224;
   const float Ts = 0.05f;
 
   const int LEFT_FORWARD_DIR  = HIGH;
@@ -84,10 +84,12 @@
 
   static inline int clampPwm(float pwm)
   {
-    int out = (int)roundf(pwm);
-    if (out < 0) out = 0;
-    if (out > 255) out = 255;
-    return out;
+      int out = (int)roundf(pwm);
+
+      if (out < 0) out = 0;
+      if (out > 255) out = 255;
+
+      return out;
   }
 
   static inline int reverseDir(int dir)
@@ -104,11 +106,11 @@
 
   void IRAM_ATTR leftISR()
   {
-    (digitalRead(L_ENC_B) == HIGH) ? left_count-- : left_count++;
+    (digitalRead(L_ENC_B) == HIGH) ? left_count++ : left_count--;
   }
   void IRAM_ATTR rightISR()
   {
-    (digitalRead(R_ENC_B) == HIGH) ? right_count++ : right_count--;
+    (digitalRead(R_ENC_B) == HIGH) ? right_count-- : right_count++;
   }
 
   // ======================================================
@@ -156,7 +158,7 @@
     float raw_vx = data->linear.x;
     float raw_w  = data->angular.z;
 
-    float smooth_w = raw_w * 0.7f; 
+    float smooth_w = raw_w * 1.85f; 
     float turn_penalty = fabsf(smooth_w) * 0.15f; 
     if (turn_penalty > 0.3f) turn_penalty = 0.3f; 
     
@@ -294,7 +296,7 @@
           applied_pwm_R = clampPwm(rpmToPwmRight(fabsf(smoothed_target_R)));
 
           // B. RIGHT WHEEL TRIM (Penyeimbang kekuatan motor bawaan)
-          applied_pwm_R = (int)((float)applied_pwm_R * 1.00f);
+          //applied_pwm_R = (int)((float)applied_pwm_R * 0.955f);
 
           // C. SINKRONISASI RODA (Error Correction 1)
           float sync_error = fabsf(filtered_rpm_L) - fabsf(filtered_rpm_R);
@@ -314,22 +316,34 @@
               fabsf(cmd_angular_z) < 0.05f
           );
 
+          // Konvensi kamu:
+          // smoothed_target_L < 0  => robot fisik MAJU
+          // smoothed_target_L > 0  => robot fisik MUNDUR
+          float drive_direction = 0.0f;
+          if (moving_cmd)
+          {
+              drive_direction = (smoothed_target_L < 0.0f) ? 1.0f : -1.0f;
+          }
+
           // Robot berhenti atau sedang belok
           if (!moving_cmd || !straight_cmd)
           {
               is_yaw_locked = false;
               prev_straight_cmd = false;
+              prev_drive_direction = 0.0f;
           }
           else
           {
-              // Baru masuk mode lurus
-              if (!prev_straight_cmd || !is_yaw_locked)
+              // Masuk mode lurus pertama kali
+              // atau arah gerak berubah: maju <-> mundur
+              if (!prev_straight_cmd || !is_yaw_locked || drive_direction != prev_drive_direction)
               {
                   target_yaw = current_yaw;
                   is_yaw_locked = true;
               }
 
               prev_straight_cmd = true;
+              prev_drive_direction = drive_direction;
 
               float yaw_error = target_yaw - current_yaw;
 
@@ -340,15 +354,21 @@
                   yaw_error += 2.0f * PI;
 
               const float Kp_yaw = 135.0f;
-              int yaw_correction = (int)roundf(yaw_error * Kp_yaw);
+
+              // Koreksi dibalik saat mundur
+              float correction_sign = drive_direction;   // +1 maju, -1 mundur
+              int yaw_correction = (int)roundf(yaw_error * Kp_yaw * correction_sign);
+
               Serial.print(" YawErr=");
               Serial.print(yaw_error * 180.0f / PI);
 
               Serial.print(" YawPWM=");
               Serial.print(yaw_correction);
+
               applied_pwm_L -= yaw_correction;
               applied_pwm_R += yaw_correction;
           }
+          
 
           // E. CLAMP SETELAH DIKOREKSI
           applied_pwm_L = constrain(applied_pwm_L, 0, 255);
@@ -424,7 +444,7 @@
       msg_imu.angular_velocity.x = gyro_x_clean;
       msg_imu.angular_velocity.y = gyro_y_clean;
       msg_imu.angular_velocity.z = gyro_z_clean;
-
+      
       msg_L.x = raw_rpm_L;
       msg_L.y = filtered_rpm_L;
       msg_L.z = (float)applied_pwm_L;
@@ -442,7 +462,4 @@
 
     // SPIN ROS
     rclc_executor_spin_some(&executor, RCL_MS_TO_NS(10));
-  
-
-
   }

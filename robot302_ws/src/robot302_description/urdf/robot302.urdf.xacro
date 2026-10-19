@@ -17,7 +17,7 @@
   <xacro:property name="base_to_footprint" value="0.08"/>
   <xacro:property name="plate_thickness" value="0.005"/>
 
-  <xacro:property name="wheel_radius" value="0.0375"/>
+  <xacro:property name="wheel_radius" value="0.0290"/>
   <xacro:property name="wheel_width" value="0.02"/>
   <xacro:property name="wheel_separation" value="0.19"/>
 
@@ -198,7 +198,7 @@
   <joint name="left_wheel_joint" type="continuous">
     <parent link="base_link"/>
     <child link="left_wheel"/>
-    <origin xyz="0 ${wheel_separation/2} -0.0375"/>
+    <origin xyz="0 ${wheel_separation/2} -0.0290"/>
     <axis xyz="0 1 0"/>
     <dynamics damping="1.5" friction="0.1"/>
   </joint>
@@ -236,7 +236,7 @@
   <joint name="right_wheel_joint" type="continuous">
     <parent link="base_link"/>
     <child link="right_wheel"/>
-    <origin xyz="0 -${wheel_separation/2} -0.0375"/>
+    <origin xyz="0 -${wheel_separation/2} -0.290"/>
     <axis xyz="0 1 0"/>
     <dynamics damping="1.5" friction="0.1"/>
   </joint>
@@ -341,7 +341,7 @@
       <left_joint>left_wheel_joint</left_joint>
       <right_joint>right_wheel_joint</right_joint>
       <wheel_separation>0.19</wheel_separation>
-      <wheel_radius>0.0375</wheel_radius>
+      <wheel_radius>0.0290</wheel_radius>
 
       <max_wheel_torque>20</max_wheel_torque>
       <max_wheel_acceleration>1.0</max_wheel_acceleration>

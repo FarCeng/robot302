@@ -10,6 +10,9 @@ from launch_ros.parameter_descriptions import ParameterValue
 from launch_ros.actions import Node
 
 def generate_launch_description():
+    ESP_PORT = '/dev/serial/by-id/usb-1a86_USB_Serial-if00-port0'
+    LIDAR_PORT = '/dev/serial/by-id/usb-Silicon_Labs_CP2102_USB_to_UART_Bridge_Controller_0001-if00-port0'
+
     pkg_description = get_package_share_directory('robot302_description')
     pkg_nav = get_package_share_directory('robot302_navigation')
     
@@ -28,7 +31,7 @@ def generate_launch_description():
     )
 
     micro_ros_agent = ExecuteProcess(
-        cmd=['ros2', 'run', 'micro_ros_agent', 'micro_ros_agent', 'serial', '--dev', '/dev/ttyUSB0', '-b', '115200'],
+        cmd=['ros2', 'run', 'micro_ros_agent', 'micro_ros_agent', 'serial', '--dev', ESP_PORT, '-b', '115200'],
         output='screen'
     )
 
@@ -65,7 +68,7 @@ def generate_launch_description():
             os.path.join(pkg_lidar, 'launch', 'rplidar_a1_launch.py')
         ),
         launch_arguments={
-            'serial_port': '/dev/ttyUSB1',
+            'serial_port': LIDAR_PORT,
             'serial_baudrate': '115200'
         }.items()
     )

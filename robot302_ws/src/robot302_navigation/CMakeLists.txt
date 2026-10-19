@@ -23,8 +23,10 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 endif()
 
-install(
-  DIRECTORY config launch maps nav2
+install(DIRECTORY
+  config
+  launch
+  maps
   DESTINATION share/${PROJECT_NAME}
 )
 
